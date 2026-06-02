@@ -1,10 +1,12 @@
-'''
 # Importa os tipos de coluna do SQLAlchemy
 from sqlalchemy import Column, Integer, String
 
 # Importa a Base criada no database.py
 # Toda tabela do banco deve herdar dela
 from app.database import Base
+
+# Importa o relationship para navegação entre tabelas
+from sqlalchemy.orm import relationship
 
 
 # Classe que representa a tabela "clientes"
@@ -14,7 +16,7 @@ class Cliente(Base):
     __tablename__ = "clientes"
 
     # COLUNAS DA TABELA
-    
+
     # ID do cliente
     # primary_key=True -> chave primária
     id = Column(Integer, primary_key=True)
@@ -30,4 +32,5 @@ class Cliente(Base):
     # Email do cliente
     email = Column(String(100))
 
-'''
+    # Relacionamento: Um cliente pode possuir vários veículos
+    veiculos = relationship("Veiculo", back_populates="cliente")

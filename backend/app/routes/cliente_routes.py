@@ -1,4 +1,4 @@
-'''
+
 
 # APIRouter -> cria grupo de rotas
 # Depends -> injeta dependências
@@ -14,7 +14,7 @@ from app.database import get_db
 from app.models.cliente_models import Cliente
 
 # Schemas Pydantic
-from app.schemas.cliente_models import (
+from app.schemas.cliente_schemas import (
     ClienteCreate,
     ClienteResponse
 )
@@ -102,4 +102,3 @@ def listar_clientes(
     # Retorna lista
     return clientes
 
-'''

@@ -1,4 +1,4 @@
-'''
+
 # Base principal do Pydantic
 from pydantic import BaseModel, EmailStr
 
@@ -26,15 +26,14 @@ class ClienteResponse(BaseModel):
 
     email: EmailStr
 
-    # from_attributes=True 
+    # from_attributes=True
     # Permite converter automaticamente:
-    
+
     # SQLAlchemy -> JSON
-    
+
     # Sem isso o FastAPI pode dar erro
     # ao retornar objetos do banco
 
     class Config:
         from_attributes = True
 
-'''
