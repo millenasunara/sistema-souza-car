@@ -1,0 +1,10 @@
+# Nesse arquivo todas as libs/frameworks instaladas devem ser listadas abaixo
+
+fastapi 
+uvicorn
+sqlalchemy
+pydantic
+python-dotenv
+pyodbc
+pymssql
+alembic

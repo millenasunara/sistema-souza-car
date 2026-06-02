@@ -1,0 +1,43 @@
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ambiente virtual
+venv/
+.env/
+
+# SQLite
+*.db
+
+# Variáveis ambiente
+.env
+
+.vscode/
+
+.pytest_cache/
+
+*.log
+
+# Windows
+Thumbs.db
+
+# MacOS
+.DS_Store
+
+*.pid
+
+# MYPY
+.mypy_cache/
+
+# IDEA / PYCHARM
+.idea/
+
+# BUILD FILES
+build/
+dist/
+*.egg-info/
+
+# JUPYTER
+.ipynb_checkpoints/
