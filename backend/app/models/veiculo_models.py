@@ -26,7 +26,6 @@ class Veiculo(Base):
         back_populates="veiculos"
     )
 
-    # ADICIONE ISSO
     ordens_servico = relationship(
         "OrdemServico",
         back_populates="veiculo"

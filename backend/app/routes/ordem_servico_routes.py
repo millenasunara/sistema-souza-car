@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.database import get_db
-
 from app.models.ordem_servico_models import OrdemServico
 from app.models.veiculo_models import Veiculo
-
 from app.schemas.ordem_servico_schemas import (
     OrdemServicoCreate,
     OrdemServicoResponse
@@ -40,24 +39,19 @@ def criar_ordem_servico(
         )
 
     nova_ordem = OrdemServico(
-
         descricao_problema=ordem.descricao_problema,
-
         status=(
             ordem.status
             if ordem.status
             else "Pendente"
         ),
-
         valor_total=ordem.valor_total,
-
-        veiculo_id=ordem.veiculo_id
+        veiculo_id=ordem.veiculo_id,
+        data_abertura=ordem.data_abertura if ordem.data_abertura else datetime.now()
     )
 
     db.add(nova_ordem)
-
     db.commit()
-
     db.refresh(nova_ordem)
 
     return {
@@ -67,7 +61,8 @@ def criar_ordem_servico(
         "valor_total": nova_ordem.valor_total,
         "veiculo_id": nova_ordem.veiculo_id,
         "veiculo_modelo": veiculo.modelo,
-        "cliente_nome": veiculo.cliente.nome
+        "cliente_nome": veiculo.cliente.nome,
+        "data_abertura": nova_ordem.data_abertura
     }
 
 
@@ -84,25 +79,19 @@ def listar_ordens_servico(
     resultado = []
 
     for ordem in ordens:
-
         resultado.append({
-
             "id": ordem.id,
-
             "descricao_problema": ordem.descricao_problema,
-
             "status": ordem.status,
-
             "valor_total": ordem.valor_total,
-
             "veiculo_id": ordem.veiculo_id,
-
             "veiculo_modelo": ordem.veiculo.modelo,
-
-            "cliente_nome": ordem.veiculo.cliente.nome
+            "cliente_nome": ordem.veiculo.cliente.nome,
+            "data_abertura": ordem.data_abertura
         })
 
     return resultado
+
 
 @router.put(
     "/{ordem_id}",
@@ -142,6 +131,7 @@ def atualizar_ordem_servico(
     ordem_db.status = ordem.status
     ordem_db.valor_total = ordem.valor_total
     ordem_db.veiculo_id = ordem.veiculo_id
+    # data_abertura NÃO é atualizada no PUT (preserva a data original)
 
     db.commit()
     db.refresh(ordem_db)
@@ -153,7 +143,8 @@ def atualizar_ordem_servico(
         "valor_total": ordem_db.valor_total,
         "veiculo_id": ordem_db.veiculo_id,
         "veiculo_modelo": veiculo.modelo,
-        "cliente_nome": veiculo.cliente.nome
+        "cliente_nome": veiculo.cliente.nome,
+        "data_abertura": ordem_db.data_abertura
     }
 
 
@@ -179,8 +170,8 @@ def deletar_ordem_servico(
         )
 
     db.delete(ordem)
-
     db.commit()
+
 
 @router.get("/dashboard")
 def dashboard_ordens(

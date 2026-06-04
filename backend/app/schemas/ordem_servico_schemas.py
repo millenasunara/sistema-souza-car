@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 
 class OrdemServicoCreate(BaseModel):
@@ -11,6 +12,8 @@ class OrdemServicoCreate(BaseModel):
     valor_total: float = 0.0
 
     veiculo_id: int
+
+    data_abertura: Optional[datetime] = None
 
 
 class OrdemServicoResponse(BaseModel):
@@ -28,6 +31,8 @@ class OrdemServicoResponse(BaseModel):
     veiculo_modelo: str
 
     cliente_nome: str
+
+    data_abertura: datetime
 
     class Config:
         from_attributes = True

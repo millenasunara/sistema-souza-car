@@ -15,7 +15,6 @@ from app.routes import (
 )
 
 # CRIAÇÃO DAS TABELAS (BANCO DE DADOS)
-# Lê todos os modelos importados e cria as tabelas fisicamente na Azure
 Base.metadata.create_all(bind=engine)
 
 
