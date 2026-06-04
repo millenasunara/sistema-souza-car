@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 
 from app.database import get_db
@@ -16,6 +16,38 @@ router = APIRouter(
 )
 
 
+def buscar_ordem_ou_404(ordem_id: int, db: Session) -> OrdemServico:
+    ordem = (
+        db.query(OrdemServico)
+        .options(
+            joinedload(OrdemServico.veiculo)
+            .joinedload(Veiculo.cliente)
+        )
+        .filter(OrdemServico.id == ordem_id)
+        .first()
+    )
+    if not ordem:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Ordem de serviço não encontrada."
+        )
+    return ordem
+
+
+def montar_resposta(ordem: OrdemServico) -> dict:
+    return {
+        "id": ordem.id,
+        "descricao_problema": ordem.descricao_problema,
+        "status": ordem.status,
+        "valor_total": ordem.valor_total,
+        "veiculo_id": ordem.veiculo_id,
+        "veiculo_modelo": ordem.veiculo.modelo,
+        "cliente_nome": ordem.veiculo.cliente.nome,
+        "data_abertura": ordem.data_abertura,
+        "data_atualizacao": ordem.data_atualizacao
+    }
+
+
 @router.post(
     "/",
     response_model=OrdemServicoResponse,
@@ -25,7 +57,6 @@ def criar_ordem_servico(
     ordem: OrdemServicoCreate,
     db: Session = Depends(get_db)
 ):
-
     veiculo = (
         db.query(Veiculo)
         .filter(Veiculo.id == ordem.veiculo_id)
@@ -40,11 +71,7 @@ def criar_ordem_servico(
 
     nova_ordem = OrdemServico(
         descricao_problema=ordem.descricao_problema,
-        status=(
-            ordem.status
-            if ordem.status
-            else "Pendente"
-        ),
+        status=ordem.status if ordem.status else "Pendente",
         valor_total=ordem.valor_total,
         veiculo_id=ordem.veiculo_id,
         data_abertura=ordem.data_abertura if ordem.data_abertura else datetime.now()
@@ -54,16 +81,7 @@ def criar_ordem_servico(
     db.commit()
     db.refresh(nova_ordem)
 
-    return {
-        "id": nova_ordem.id,
-        "descricao_problema": nova_ordem.descricao_problema,
-        "status": nova_ordem.status,
-        "valor_total": nova_ordem.valor_total,
-        "veiculo_id": nova_ordem.veiculo_id,
-        "veiculo_modelo": veiculo.modelo,
-        "cliente_nome": veiculo.cliente.nome,
-        "data_abertura": nova_ordem.data_abertura
-    }
+    return montar_resposta(nova_ordem)
 
 
 @router.get(
@@ -73,24 +91,27 @@ def criar_ordem_servico(
 def listar_ordens_servico(
     db: Session = Depends(get_db)
 ):
+    ordens = (
+        db.query(OrdemServico)
+        .options(
+            joinedload(OrdemServico.veiculo)
+            .joinedload(Veiculo.cliente)
+        )
+        .all()
+    )
 
-    ordens = db.query(OrdemServico).all()
+    return [montar_resposta(o) for o in ordens]
 
-    resultado = []
 
-    for ordem in ordens:
-        resultado.append({
-            "id": ordem.id,
-            "descricao_problema": ordem.descricao_problema,
-            "status": ordem.status,
-            "valor_total": ordem.valor_total,
-            "veiculo_id": ordem.veiculo_id,
-            "veiculo_modelo": ordem.veiculo.modelo,
-            "cliente_nome": ordem.veiculo.cliente.nome,
-            "data_abertura": ordem.data_abertura
-        })
-
-    return resultado
+@router.get(
+    "/{ordem_id}",
+    response_model=OrdemServicoResponse
+)
+def buscar_ordem_servico(
+    ordem_id: int,
+    db: Session = Depends(get_db)
+):
+    return montar_resposta(buscar_ordem_ou_404(ordem_id, db))
 
 
 @router.put(
@@ -102,18 +123,7 @@ def atualizar_ordem_servico(
     ordem: OrdemServicoCreate,
     db: Session = Depends(get_db)
 ):
-
-    ordem_db = (
-        db.query(OrdemServico)
-        .filter(OrdemServico.id == ordem_id)
-        .first()
-    )
-
-    if not ordem_db:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ordem de serviço não encontrada."
-        )
+    ordem_db = buscar_ordem_ou_404(ordem_id, db)
 
     veiculo = (
         db.query(Veiculo)
@@ -131,21 +141,12 @@ def atualizar_ordem_servico(
     ordem_db.status = ordem.status
     ordem_db.valor_total = ordem.valor_total
     ordem_db.veiculo_id = ordem.veiculo_id
-    # data_abertura NÃO é atualizada no PUT (preserva a data original)
+    ordem_db.data_atualizacao = datetime.now()
 
     db.commit()
     db.refresh(ordem_db)
 
-    return {
-        "id": ordem_db.id,
-        "descricao_problema": ordem_db.descricao_problema,
-        "status": ordem_db.status,
-        "valor_total": ordem_db.valor_total,
-        "veiculo_id": ordem_db.veiculo_id,
-        "veiculo_modelo": veiculo.modelo,
-        "cliente_nome": veiculo.cliente.nome,
-        "data_abertura": ordem_db.data_abertura
-    }
+    return montar_resposta(ordem_db)
 
 
 @router.delete(
@@ -156,19 +157,7 @@ def deletar_ordem_servico(
     ordem_id: int,
     db: Session = Depends(get_db)
 ):
-
-    ordem = (
-        db.query(OrdemServico)
-        .filter(OrdemServico.id == ordem_id)
-        .first()
-    )
-
-    if not ordem:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Ordem de serviço não encontrada."
-        )
-
+    ordem = buscar_ordem_ou_404(ordem_id, db)
     db.delete(ordem)
     db.commit()
 
@@ -177,30 +166,14 @@ def deletar_ordem_servico(
 def dashboard_ordens(
     db: Session = Depends(get_db)
 ):
-
     ordens = db.query(OrdemServico).all()
 
     total_ordens = len(ordens)
-
-    pendentes = len([
-        o for o in ordens
-        if o.status == "Pendente"
-    ])
-
-    em_andamento = len([
-        o for o in ordens
-        if o.status == "Em Andamento"
-    ])
-
-    concluidas = len([
-        o for o in ordens
-        if o.status == "Concluído"
-    ])
-
+    pendentes = len([o for o in ordens if o.status == "Pendente"])
+    em_andamento = len([o for o in ordens if o.status == "Em Andamento"])
+    concluidas = len([o for o in ordens if o.status == "Concluído"])
     faturamento_total = sum(
-        o.valor_total
-        for o in ordens
-        if o.status == "Concluído"
+        o.valor_total for o in ordens if o.status == "Concluído"
     )
 
     return {

@@ -34,5 +34,7 @@ class OrdemServicoResponse(BaseModel):
 
     data_abertura: datetime
 
+    data_atualizacao: datetime
+
     class Config:
         from_attributes = True
