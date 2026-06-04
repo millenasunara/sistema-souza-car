@@ -1,6 +1,8 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 from typing import Optional
 from datetime import datetime
+
+from app.datetime import to_brazil_time
 
 
 class OrdemServicoCreate(BaseModel):
@@ -38,3 +40,7 @@ class OrdemServicoResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+    @field_serializer("data_abertura", "data_atualizacao")
+    def serialize_datetimes(self, value: datetime):
+        return to_brazil_time(value)

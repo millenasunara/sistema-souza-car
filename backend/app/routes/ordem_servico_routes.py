@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from datetime import datetime
+from typing import Optional
 
 from app.database import get_db
 from app.models.ordem_servico_models import OrdemServico
@@ -14,6 +16,43 @@ router = APIRouter(
     prefix="/ordens-servico",
     tags=["Ordens de Serviço"]
 )
+
+
+@router.get("/dashboard")
+def dashboard_ordens(
+    db: Session = Depends(get_db),
+    data_inicio: Optional[datetime] = Query(None, description="Filtrar a partir desta data"),
+    data_fim: Optional[datetime] = Query(None, description="Filtrar até esta data"),
+    status_filtro: Optional[str] = Query(None, description="Filtrar por status")
+):
+    query = db.query(OrdemServico)
+
+    if data_inicio:
+        query = query.filter(OrdemServico.data_abertura >= data_inicio)
+
+    if data_fim:
+        query = query.filter(OrdemServico.data_abertura <= data_fim)
+
+    if status_filtro:
+        query = query.filter(OrdemServico.status == status_filtro)
+
+    ordens = query.all()
+
+    total_ordens = len(ordens)
+    pendentes = len([o for o in ordens if o.status == "Pendente"])
+    em_andamento = len([o for o in ordens if o.status == "Em Andamento"])
+    concluidas = len([o for o in ordens if o.status == "Concluído"])
+    faturamento_total = sum(
+        o.valor_total for o in ordens if o.status == "Concluído"
+    )
+
+    return {
+        "total_ordens": total_ordens,
+        "pendentes": pendentes,
+        "em_andamento": em_andamento,
+        "concluidas": concluidas,
+        "faturamento_total": faturamento_total
+    }
 
 
 def buscar_ordem_ou_404(ordem_id: int, db: Session) -> OrdemServico:
@@ -160,26 +199,3 @@ def deletar_ordem_servico(
     ordem = buscar_ordem_ou_404(ordem_id, db)
     db.delete(ordem)
     db.commit()
-
-
-@router.get("/dashboard")
-def dashboard_ordens(
-    db: Session = Depends(get_db)
-):
-    ordens = db.query(OrdemServico).all()
-
-    total_ordens = len(ordens)
-    pendentes = len([o for o in ordens if o.status == "Pendente"])
-    em_andamento = len([o for o in ordens if o.status == "Em Andamento"])
-    concluidas = len([o for o in ordens if o.status == "Concluído"])
-    faturamento_total = sum(
-        o.valor_total for o in ordens if o.status == "Concluído"
-    )
-
-    return {
-        "total_ordens": total_ordens,
-        "pendentes": pendentes,
-        "em_andamento": em_andamento,
-        "concluidas": concluidas,
-        "faturamento_total": faturamento_total
-    }
